@@ -1,0 +1,116 @@
+{
+  "connection": {
+    "name": "Registro Accidentes - MySQL XAMPP",
+    "driver": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "database": "registro_accidentes",
+    "username": "root",
+    "password": "",
+    "url": "jdbc:mysql://localhost:3306/registro_accidentes",
+    "properties": {
+      "useUnicode": "true",
+      "characterEncoding": "utf8",
+      "useSSL": "false",
+      "serverTimezone": "UTC",
+      "allowPublicKeyRetrieval": "true",
+      "useLegacyDatetimeCode": "false"
+    }
+  },
+  "xampp_socket": {
+    "socket_path": "/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock",
+    "note": "Para conexiones locales en macOS con XAMPP, usar socket en lugar de TCP"
+  },
+  "database_info": {
+    "name": "registro_accidentes",
+    "description": "Sistema de registro de accidentes e incidentes laborales",
+    "charset": "utf8mb4",
+    "collation": "utf8mb4_unicode_ci"
+  },
+  "tables": {
+    "eventos": {
+      "description": "Tabla principal de eventos (accidentes, incidentes, casi accidentes)",
+      "fields": [
+        "id (INT, PK, AUTO_INCREMENT)",
+        "fecha (DATETIME)",
+        "tipo (ENUM: accidente, incidente, casi_accidente)",
+        "lugar (VARCHAR 255)",
+        "persona_afectada (VARCHAR 255)",
+        "descripcion (TEXT)",
+        "evidencia (VARCHAR 255)",
+        "estado (ENUM: pendiente, en_revision, resuelto, cerrado)",
+        "prioridad (ENUM: baja, media, alta, critica)",
+        "fecha_creacion (DATETIME)",
+        "fecha_actualizacion (DATETIME)"
+      ]
+    },
+    "usuarios": {
+      "description": "Tabla de usuarios del sistema",
+      "fields": [
+        "id (INT, PK, AUTO_INCREMENT)",
+        "nombre (VARCHAR 100)",
+        "email (VARCHAR 255, UNIQUE)",
+        "rol (ENUM: admin, supervisor, empleado)",
+        "activo (BOOLEAN)",
+        "fecha_creacion (DATETIME)"
+      ]
+    },
+    "departamentos": {
+      "description": "Tabla de departamentos de la empresa",
+      "fields": [
+        "id (INT, PK, AUTO_INCREMENT)",
+        "nombre (VARCHAR 100)",
+        "descripcion (TEXT)",
+        "activo (BOOLEAN)"
+      ]
+    }
+  },
+  "views": {
+    "v_estadisticas_eventos": {
+      "description": "Vista para estadísticas de eventos",
+      "fields": [
+        "total_eventos",
+        "total_accidentes",
+        "total_incidentes",
+        "total_casi_accidentes",
+        "eventos_pendientes",
+        "eventos_en_revision",
+        "eventos_resueltos",
+        "eventos_cerrados",
+        "prioridad_critica",
+        "prioridad_alta",
+        "prioridad_media",
+        "prioridad_baja"
+      ]
+    }
+  },
+  "setup_instructions": {
+    "1": "Abrir DBeaver",
+    "2": "Crear nueva conexión",
+    "3": "Seleccionar MySQL",
+    "4": "Configurar conexión:",
+    "5": "  - Host: localhost",
+    "6": "  - Port: 3306",
+    "7": "  - Database: registro_accidentes",
+    "8": "  - Username: root",
+    "9": "  - Password: (dejar vacío)",
+    "10": "5. En Driver properties agregar:",
+    "11": "  - useSSL: false",
+    "12": "  - serverTimezone: UTC",
+    "13": "6. Testear conexión",
+    "14": "7. Conectar"
+  },
+  "troubleshooting": {
+    "connection_refused": "Verificar que XAMPP esté ejecutándose",
+    "access_denied": "Verificar credenciales de usuario",
+    "database_not_found": "Ejecutar: npm run setup-db",
+    "socket_error": "Usar socket path: /Applications/XAMPP/xamppfiles/var/mysql/mysql.sock"
+  },
+  "useful_queries": {
+    "ver_eventos": "SELECT * FROM eventos ORDER BY fecha DESC;",
+    "estadisticas": "SELECT * FROM v_estadisticas_eventos;",
+    "eventos_pendientes": "SELECT * FROM eventos WHERE estado = 'pendiente';",
+    "eventos_por_tipo": "SELECT tipo, COUNT(*) as cantidad FROM eventos GROUP BY tipo;",
+    "eventos_por_estado": "SELECT estado, COUNT(*) as cantidad FROM eventos GROUP BY estado;"
+  }
+}

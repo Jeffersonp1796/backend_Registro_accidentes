@@ -1,0 +1,26 @@
+{
+  "connection": {
+    "name": "Registro Accidentes MySQL",
+    "driver": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "database": "registro_accidentes",
+    "username": "root",
+    "password": "",
+    "url": "jdbc:mysql://localhost:3306/registro_accidentes",
+    "properties": {
+      "useUnicode": "true",
+      "characterEncoding": "utf8",
+      "useSSL": "false",
+      "serverTimezone": "UTC"
+    }
+  },
+  "instructions": {
+    "1": "Abrir DBeaver",
+    "2": "Crear nueva conexión",
+    "3": "Seleccionar MySQL",
+    "4": "Configurar con los datos de arriba",
+    "5": "Testear conexión",
+    "6": "Conectar"
+  }
+}

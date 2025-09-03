@@ -1,0 +1,9 @@
+{
+  "timestamp": "2025-09-02T02:48:15.912Z",
+  "database": "registro_accidentes",
+  "connection": null,
+  "structure": true,
+  "dataCount": 1,
+  "sequelizeConfig": true,
+  "backupCreated": null
+}
