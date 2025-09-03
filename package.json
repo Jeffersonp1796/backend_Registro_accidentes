@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "build": "echo 'Build completed'",
     "dev": "nodemon index.js",
     "dev:alt": "node index.js",
     "dev:watch": "node --watch index.js",

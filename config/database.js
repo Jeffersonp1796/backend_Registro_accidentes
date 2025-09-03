@@ -11,8 +11,8 @@ const sequelize = new Sequelize(
     port: process.env.DB_PORT || 3306,
     dialect: process.env.DB_DIALECT || 'mysql',
     dialectOptions: {
-      // Usar socket de XAMPP en macOS
-      socketPath: process.env.DB_SOCKET || '/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock'
+      // Railway MySQL configuration
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
     },
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     pool: {
