@@ -27,6 +27,10 @@ CREATE TABLE `eventos` (
   `prioridad` enum('baja','media','alta','critica') DEFAULT 'media',
   `fecha_creacion` datetime DEFAULT CURRENT_TIMESTAMP,
   `fecha_actualizacion` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  -- Columnas de Cloudinary
+  `imagen_principal_url` varchar(500) DEFAULT NULL COMMENT 'URL de la imagen principal en Cloudinary',
+  `imagen_principal_public_id` varchar(255) DEFAULT NULL COMMENT 'Public ID de la imagen principal en Cloudinary',
+  `imagenes_adicionales` json DEFAULT NULL COMMENT 'Array de objetos con URLs y public_ids de imágenes adicionales',
   PRIMARY KEY (`id`),
   KEY `idx_fecha` (`fecha`),
   KEY `idx_tipo` (`tipo`),
