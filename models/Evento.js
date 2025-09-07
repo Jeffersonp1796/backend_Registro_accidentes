@@ -33,6 +33,23 @@ const Evento = sequelize.define('Evento', {
     type: DataTypes.STRING(255),
     allowNull: true
   },
+  // Cloudinary image fields
+  imagen_principal_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'URL de la imagen principal en Cloudinary'
+  },
+  imagen_principal_public_id: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'Public ID de la imagen principal en Cloudinary'
+  },
+  imagenes_adicionales: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    comment: 'Array de objetos con URLs y public_ids de imágenes adicionales',
+    defaultValue: []
+  },
   estado: {
     type: DataTypes.ENUM('pendiente', 'en_revision', 'resuelto', 'cerrado'),
     defaultValue: 'pendiente'

@@ -1,5 +1,27 @@
 const Evento = require('../models/Evento');
 const { sequelize } = require('../config/database');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const multer = require('multer');
+
+// Configuración de Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Configuración de almacenamiento con Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'eventos',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    transformation: [{ width: 1000, height: 1000, crop: 'limit' }]
+  }
+});
+
+const upload = multer({ storage: storage });
 
 exports.obtenerEventos = async (req, res) => {
   try {
@@ -15,8 +37,26 @@ exports.obtenerEventos = async (req, res) => {
 
 exports.crearEvento = async (req, res) => {
   try {
-    const { fecha, tipo, lugar, persona_afectada, descripcion, estado, prioridad } = req.body;
-    const evidencia = req.file ? req.file.filename : null;
+    const { fecha, tipo, lugar, persona_afectada, descripcion, estado, prioridad, imagenes_adicionales } = req.body;
+    
+    // Procesar imagen principal si existe
+    let imagenPrincipalData = null;
+    if (req.file) {
+      imagenPrincipalData = {
+        url: req.file.path,
+        public_id: req.file.filename
+      };
+    }
+    
+    // Procesar imágenes adicionales si vienen en el body
+    let imagenesAdicionalesArray = [];
+    if (imagenes_adicionales) {
+      try {
+        imagenesAdicionalesArray = JSON.parse(imagenes_adicionales);
+      } catch (e) {
+        console.error('Error al parsear imágenes adicionales:', e);
+      }
+    }
     
     const nuevoEvento = await Evento.create({
       fecha: fecha || new Date(),
@@ -24,14 +64,18 @@ exports.crearEvento = async (req, res) => {
       lugar,
       persona_afectada,
       descripcion,
-      evidencia,
+      evidencia: req.file ? req.file.filename : null, // Mantener compatibilidad
+      imagen_principal_url: imagenPrincipalData?.url || null,
+      imagen_principal_public_id: imagenPrincipalData?.public_id || null,
+      imagenes_adicionales: imagenesAdicionalesArray,
       estado: estado || 'pendiente',
       prioridad: prioridad || 'media'
     });
     
     res.status(201).json({ 
       id: nuevoEvento.id,
-      message: 'Evento creado exitosamente'
+      message: 'Evento creado exitosamente',
+      evento: nuevoEvento
     });
   } catch (error) {
     console.error('Error al crear evento:', error);
@@ -60,22 +104,60 @@ exports.obtenerEvento = async (req, res) => {
 
 exports.actualizarEvento = async (req, res) => {
   try {
-    const { fecha, tipo, lugar, persona_afectada, descripcion, estado, prioridad } = req.body;
+    const { fecha, tipo, lugar, persona_afectada, descripcion, estado, prioridad, imagenes_adicionales } = req.body;
     
     const evento = await Evento.findByPk(req.params.id);
     if (!evento) {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
     
-    await evento.update({
+    // Si hay una nueva imagen principal, eliminar la anterior de Cloudinary
+    if (req.file && evento.imagen_principal_public_id) {
+      try {
+        await cloudinary.uploader.destroy(evento.imagen_principal_public_id);
+      } catch (error) {
+        console.error('Error al eliminar imagen anterior:', error);
+      }
+    }
+    
+    // Procesar nueva imagen principal si existe
+    let imagenPrincipalData = null;
+    if (req.file) {
+      imagenPrincipalData = {
+        url: req.file.path,
+        public_id: req.file.filename
+      };
+    }
+    
+    // Procesar imágenes adicionales si vienen en el body
+    let imagenesAdicionalesArray = evento.imagenes_adicionales || [];
+    if (imagenes_adicionales) {
+      try {
+        imagenesAdicionalesArray = JSON.parse(imagenes_adicionales);
+      } catch (e) {
+        console.error('Error al parsear imágenes adicionales:', e);
+      }
+    }
+    
+    const updateData = {
       fecha: fecha || evento.fecha,
       tipo: tipo || evento.tipo,
       lugar: lugar || evento.lugar,
       persona_afectada: persona_afectada || evento.persona_afectada,
       descripcion: descripcion || evento.descripcion,
       estado: estado || evento.estado,
-      prioridad: prioridad || evento.prioridad
-    });
+      prioridad: prioridad || evento.prioridad,
+      imagenes_adicionales: imagenesAdicionalesArray
+    };
+    
+    // Solo actualizar campos de imagen si hay una nueva imagen
+    if (imagenPrincipalData) {
+      updateData.imagen_principal_url = imagenPrincipalData.url;
+      updateData.imagen_principal_public_id = imagenPrincipalData.public_id;
+      updateData.evidencia = req.file.filename; // Mantener compatibilidad
+    }
+    
+    await evento.update(updateData);
     
     res.json({ 
       message: 'Evento actualizado exitosamente',
@@ -100,6 +182,28 @@ exports.eliminarEvento = async (req, res) => {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
     
+    // Eliminar imagen principal de Cloudinary si existe
+    if (evento.imagen_principal_public_id) {
+      try {
+        await cloudinary.uploader.destroy(evento.imagen_principal_public_id);
+      } catch (error) {
+        console.error('Error al eliminar imagen principal:', error);
+      }
+    }
+    
+    // Eliminar imágenes adicionales de Cloudinary si existen
+    if (evento.imagenes_adicionales && Array.isArray(evento.imagenes_adicionales)) {
+      for (const imagen of evento.imagenes_adicionales) {
+        if (imagen.public_id) {
+          try {
+            await cloudinary.uploader.destroy(imagen.public_id);
+          } catch (error) {
+            console.error('Error al eliminar imagen adicional:', error);
+          }
+        }
+      }
+    }
+    
     await evento.destroy();
     res.json({ message: 'Evento eliminado exitosamente' });
   } catch (error) {
@@ -107,6 +211,130 @@ exports.eliminarEvento = async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
+// Método para subir imagen adicional a un evento existente
+exports.subirImagenAdicional = async (req, res) => {
+  try {
+    const evento = await Evento.findByPk(req.params.id);
+    if (!evento) {
+      return res.status(404).json({ error: 'Evento no encontrado' });
+    }
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No se proporcionó ninguna imagen' });
+    }
+    
+    const nuevaImagen = {
+      url: req.file.path,
+      public_id: req.file.filename
+    };
+    
+    // Agregar la nueva imagen al array de imágenes adicionales
+    const imagenesActuales = evento.imagenes_adicionales || [];
+    imagenesActuales.push(nuevaImagen);
+    
+    await evento.update({
+      imagenes_adicionales: imagenesActuales
+    });
+    
+    res.json({
+      message: 'Imagen adicional subida exitosamente',
+      imagen: nuevaImagen,
+      totalImagenes: imagenesActuales.length
+    });
+  } catch (error) {
+    console.error('Error al subir imagen adicional:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// Método para eliminar una imagen específica de un evento
+exports.eliminarImagen = async (req, res) => {
+  try {
+    const { eventoId, publicId } = req.params;
+    
+    const evento = await Evento.findByPk(eventoId);
+    if (!evento) {
+      return res.status(404).json({ error: 'Evento no encontrado' });
+    }
+    
+    // Eliminar de Cloudinary
+    try {
+      await cloudinary.uploader.destroy(publicId);
+    } catch (error) {
+      console.error('Error al eliminar imagen de Cloudinary:', error);
+    }
+    
+    // Eliminar del array de imágenes adicionales
+    if (evento.imagenes_adicionales && Array.isArray(evento.imagenes_adicionales)) {
+      const imagenesFiltradas = evento.imagenes_adicionales.filter(
+        img => img.public_id !== publicId
+      );
+      
+      await evento.update({
+        imagenes_adicionales: imagenesFiltradas
+      });
+      
+      res.json({
+        message: 'Imagen eliminada exitosamente',
+        imagenesRestantes: imagenesFiltradas.length
+      });
+    } else {
+      res.status(404).json({ error: 'Imagen no encontrada en el evento' });
+    }
+  } catch (error) {
+    console.error('Error al eliminar imagen:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// Método para obtener URLs optimizadas de imágenes
+exports.obtenerImagenesOptimizadas = async (req, res) => {
+  try {
+    const evento = await Evento.findByPk(req.params.id);
+    if (!evento) {
+      return res.status(404).json({ error: 'Evento no encontrado' });
+    }
+    
+    const imagenesOptimizadas = {
+      principal: null,
+      adicionales: []
+    };
+    
+    // Generar URL optimizada para imagen principal
+    if (evento.imagen_principal_public_id) {
+      imagenesOptimizadas.principal = cloudinary.url(evento.imagen_principal_public_id, {
+        width: 800,
+        height: 600,
+        crop: 'fill',
+        quality: 'auto',
+        format: 'auto'
+      });
+    }
+    
+    // Generar URLs optimizadas para imágenes adicionales
+    if (evento.imagenes_adicionales && Array.isArray(evento.imagenes_adicionales)) {
+      imagenesOptimizadas.adicionales = evento.imagenes_adicionales.map(imagen => ({
+        url: cloudinary.url(imagen.public_id, {
+          width: 400,
+          height: 300,
+          crop: 'fill',
+          quality: 'auto',
+          format: 'auto'
+        }),
+        public_id: imagen.public_id
+      }));
+    }
+    
+    res.json(imagenesOptimizadas);
+  } catch (error) {
+    console.error('Error al obtener imágenes optimizadas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// Exportar configuración de multer para usar en las rutas
+exports.upload = upload;
 
 // Nuevo método para obtener estadísticas
 exports.obtenerEstadisticas = async (req, res) => {
